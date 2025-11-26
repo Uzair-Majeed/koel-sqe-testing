@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Verify Triggers
-        run: echo "✅ Source Stage Initiated Successfully on branch ${{ github.ref }}"
+        run: echo "Source Stage Initiated Successfully on branch ${{ github.ref }}"
 
   # -----------------------------------------------------------------
   # JOB 2: BUILD BACKEND (PHP/Composer)
@@ -42,7 +42,7 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, intl, gd, exif, iconv
           coverage: none
 
-      # Install Dependencies (Using --ignore-platform-reqs to prevent version conflicts)
+      # Install Dependencies 
       - name: Install Backend Dependencies
         run: composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts --ignore-platform-reqs
 
@@ -71,13 +71,13 @@ jobs:
         with:
           node-version: '20'
 
-      # FIX: Use pnpm version 9 (Koel requires v9 now, not v8)
+
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
           version: 9
 
-      # FIX: Use --no-frozen-lockfile so it doesn't crash on small version mismatches
+     
       - name: Install Frontend Dependencies
         run: pnpm install --no-frozen-lockfile
 
