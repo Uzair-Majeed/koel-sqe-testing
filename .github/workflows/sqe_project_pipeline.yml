@@ -9,7 +9,7 @@ on:
 
 jobs:
   # -----------------------------------------------------------------
-  # JOB 1: SOURCE CHECK
+  # JOB 1: SOURCE CHECK (Validation)
   # -----------------------------------------------------------------
   source-check:
     name: Source Stage - Trigger Validation
@@ -18,23 +18,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Fetch all history for accurate versioning
 
       - name: Verify Triggers
-        run: echo "Source Stage Initiated Successfully on branch ${{ github.ref }}"
+        run: |
+          echo "Source Stage Initiated."
+          echo "Triggered by: ${{ github.event_name }} on branch ${{ github.ref }}"
 
   # -----------------------------------------------------------------
   # JOB 2: BUILD BACKEND (PHP/Composer)
   # -----------------------------------------------------------------
   build-backend:
     name: Build Stage - Backend (Laravel)
-    needs: source-check
+    needs: source-check # Wait for source check to pass
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Setup PHP 8.2 (Standard for Koel)
+      # Tool Integration: Setup PHP 8.2 (Required by Koel)
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -42,11 +44,21 @@ jobs:
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, intl, gd, exif, iconv
           coverage: none
 
-      # Install Dependencies (Ignoring platform reqs to prevent errors)
-      - name: Install Backend Dependencies
-        run: composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts --ignore-platform-reqs
+      # Tool Integration: Cache Composer dependencies (Rubric: Tool Integration)
+      - name: Cache Composer Packages
+        id: composer-cache
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-
 
-      # Save the 'vendor' folder so we can use it in the Test Stage
+      # Build Step: Install Dependencies
+      - name: Install Dependencies
+        run: composer install --prefer-dist --no-ansi --no-interaction --no-progress --no-scripts
+
+      # Rubric: Artifact Creation (Save the 'vendor' folder for the next stage)
       - name: Upload Backend Artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -65,27 +77,35 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Setup Node.js 20
+      # Tool Integration: Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # FIX: Use pnpm version 9 and force installation
+      # Koel uses 'pnpm' instead of 'npm'. We must install it.
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 9
+          version: 8
 
-      # FIX: Use --no-frozen-lockfile to prevent the "Lockfile" error
+      # Tool Integration: Cache Node Modules
+      - name: Cache Node Modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Build Step: Install & Compile
       - name: Install Frontend Dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
-      # Compile the assets
       - name: Compile Assets (Vite Build)
         run: pnpm build
 
-      # Save the compiled assets for the Deployment Stage
+      # Rubric: Artifact Creation (Save the compiled assets)
       - name: Upload Frontend Artifacts
         uses: actions/upload-artifact@v4
         with:
